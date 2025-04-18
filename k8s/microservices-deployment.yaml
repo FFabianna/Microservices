@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: fabiianna/redis-image
+          image: automationrepository.azurecr.io/redis-image
           ports:
             - containerPort: 6379
 ---
@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
         - name: zipkin
-          image: fabiianna/zipkin-image
+          image: automationrepository.azurecr.io/zipkin-image
           ports:
             - containerPort: 9411
 ---
@@ -84,7 +84,7 @@ spec:
     spec:
       containers:
         - name: usersapi
-          image: fabiianna/usersapi-image
+          image: automationrepository.azurecr.io/usersapi-image
           ports:
             - containerPort: 8083
 ---
@@ -118,7 +118,7 @@ spec:
     spec:
       containers:
         - name: authapi
-          image: fabiianna/authapi-image
+          image: automationrepository.azurecr.io/authapi-image
           ports:
             - containerPort: 8000
 ---
@@ -152,7 +152,7 @@ spec:
     spec:
       containers:
         - name: todosapi
-          image: fabiianna/todosapi-image
+          image: automationrepository.azurecr.io/todosapi-image
           ports:
             - containerPort: 8082
 ---
@@ -186,7 +186,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: fabiianna/frontend-image
+          image: automationrepository.azurecr.io/frontend-image
           ports:
             - containerPort: 8080
 ---

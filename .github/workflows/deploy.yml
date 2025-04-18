@@ -41,3 +41,11 @@ jobs:
         docker push $REGISTRY/authapi-image
         docker push $REGISTRY/todosapi-image
         docker push $REGISTRY/frontend-image
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+        cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+    - name: Deploy to AKS with kubectl
+      run: |
+        kubectl apply -f k8s/microservices-deployment.yaml
