@@ -193,11 +193,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: frontend-service
 spec:
+  type: LoadBalancer
   selector:
     app: frontend
   ports:
-    - port: 8080
-      targetPort: 8080
-  type: NodePort
+    - protocol: TCP
+      port: 80          # Puerto público
+      targetPort: 8080  # Puerto interno en el contenedor
