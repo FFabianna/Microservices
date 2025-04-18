@@ -1,0 +1,203 @@
+# Redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: fabiianna/redis-image
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
+
+# Zipkin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: fabiianna/zipkin-image
+          ports:
+            - containerPort: 9411
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin
+spec:
+  selector:
+    app: zipkin
+  ports:
+    - port: 9411
+      targetPort: 9411
+  type: ClusterIP
+
+# Users API
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usersapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: usersapi
+  template:
+    metadata:
+      labels:
+        app: usersapi
+    spec:
+      containers:
+        - name: usersapi
+          image: fabiianna/usersapi-image
+          ports:
+            - containerPort: 8083
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: usersapi
+spec:
+  selector:
+    app: usersapi
+  ports:
+    - port: 8083
+      targetPort: 8083
+  type: ClusterIP
+
+# Auth API
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authapi
+  template:
+    metadata:
+      labels:
+        app: authapi
+    spec:
+      containers:
+        - name: authapi
+          image: fabiianna/authapi-image
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authapi
+spec:
+  selector:
+    app: authapi
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+
+# Todos API
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todosapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todosapi
+  template:
+    metadata:
+      labels:
+        app: todosapi
+    spec:
+      containers:
+        - name: todosapi
+          image: fabiianna/todosapi-image
+          ports:
+            - containerPort: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todosapi
+spec:
+  selector:
+    app: todosapi
+  ports:
+    - port: 8082
+      targetPort: 8082
+  type: ClusterIP
+
+# Frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: fabiianna/frontend-image
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: NodePort

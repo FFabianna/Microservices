@@ -1,0 +1,43 @@
+name: Build and Push to ACR
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: automationrepository.azurecr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Azure ACR login
+      run: az acr login --name automationrepository
+
+    - name: Build and push Docker images
+      run: |
+        docker build -t $REGISTRY/redis-image ./redis
+        docker build -t $REGISTRY/zipkin-image ./zipkin
+        docker build -t $REGISTRY/log-image ./log-message-processor
+        docker build -t $REGISTRY/usersapi-image ./users-api
+        docker build -t $REGISTRY/authapi-image ./auth-api
+        docker build -t $REGISTRY/todosapi-image ./todos-api
+        docker build -t $REGISTRY/frontend-image ./frontend
+
+        docker push $REGISTRY/redis-image
+        docker push $REGISTRY/zipkin-image
+        docker push $REGISTRY/log-image
+        docker push $REGISTRY/usersapi-image
+        docker push $REGISTRY/authapi-image
+        docker push $REGISTRY/todosapi-image
+        docker push $REGISTRY/frontend-image
