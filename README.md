@@ -1,85 +1,152 @@
-# Microservice App - PRFT Devops Training
 
-This is the application you are going to use through the whole traninig. This, hopefully, will teach you the fundamentals you need in a real project. You will find a basic TODO application designed with a [microservice architecture](https://microservices.io). Although is a TODO application, it is interesting because the microservices that compose it are written in different programming language or frameworks (Go, Python, Vue, Java, and NodeJS). With this design you will experiment with multiple build tools and environments. 
+# Documentación Técnica – Proyecto DevOps en AKS
 
-## Components
-In each folder you can find a more in-depth explanation of each component:
+## Repositorios de Partida
 
-1. [Users API](/users-api) is a Spring Boot application. Provides user profiles. At the moment, does not provide full CRUD, just getting a single user and all users.
-2. [Auth API](/auth-api) is a Go application, and provides authorization functionality. Generates [JWT](https://jwt.io/) tokens to be used with other APIs.
-3. [TODOs API](/todos-api) is a NodeJS application, provides CRUD functionality over user's TODO records. Also, it logs "create" and "delete" operations to [Redis](https://redis.io/) queue.
-4. [Log Message Processor](/log-message-processor) is a queue processor written in Python. Its purpose is to read messages from a Redis queue and print them to standard output.
-5. [Frontend](/frontend) Vue application, provides UI.
+Este proyecto parte del repositorio original:
 
-## Architecture
+- https://github.com/bortizf/microservice-app-example.git
 
-Take a look at the components diagram that describes them and their interactions.
-![microservice-app-example](/arch-img/Microservices.png)
+Desde este punto, se avanzó tomando como base el repositorio de una de las integrantes del equipo:
+
+- https://github.com/Vanesa155/microservice-kubernetes.git
+
+Este segundo repositorio contiene una implementación funcional de despliegue de microservicios con Docker. Cada microservicio cuenta con su propio `Dockerfile`, lo cual permite la construcción independiente de sus respectivas imágenes. Para facilitar el despliegue local, se incluye un script en Bash que construye y ejecuta los contenedores dentro de una red personalizada.
+
+## Infraestructura en Azure
+
+Antes de automatizar el despliegue, se debe preparar la infraestructura necesaria:
+
+### 1. Crear Azure Container Registry (ACR)
+```ps
+az acr create --resource-group <resource_group_name> --name <acr_name> --sku Basic
+```
+Un Azure Container Registry es un registro privado de imágenes Docker, donde puedes:
+Push de imágenes desde tu máquina local o CI/CD.
 
 
-# Despliegue de Microservicios con Docker
+Pull desde tus clústeres de Kubernetes (como AKS).
 
-En este repositorio cada microservicion ya tiene su respectivo `Dockerfile` con todo lo necesario para su construcción. Por temas de practicidad se creo un script Bash que despliega un conjunto de microservicios utilizando Docker. Incluye la construcción de imágenes y la ejecución de contenedores en una red personalizada.
 
-## Descripción
+Integrarlo con GitHub Actions, Azure Pipelines, etc.
 
-El script realiza los siguientes pasos:
 
-1. **Crear la red:** Se crea una red llamada `microservices-network` si no existe, utilizando el comando:
-
-    ```sh
-    docker network create microservices-network || true
-    ```
-
-2. **Construcción de Imágenes:** Se construyen las imágenes de Docker para cada servicio utilizando los siguientes comandos:
-
-    ```sh
-    docker build -t redis-image ./redis
-    docker build -t zipkin-image ./zipkin
-    docker build -t usersapi-image ./users-api
-    docker build -t authapi-image ./auth-api
-    docker build -t todosapi-image ./todos-api
-    docker build -t frontend-image ./frontend
-    ```
-
-**Nota:** se crean primero los servicios de redis y zipkin ya que son necesarios para otros microservicios, es decir dependen de ellos.
-
-3. **Ejecución de Contenedores:** Se ejecutan los contenedores en orden, conectándolos a la red `microservices-network`. Se exponen los puertos necesarios para cada servicio:
-
-    ```sh
-    docker run -d --name redis --network microservices-network -p 6379:6379 redis-image
-    docker run -d --name zipkin --network microservices-network -p 9411:9411 zipkin-image
-    docker run -d --name usersapi --network microservices-network -p 8083:8083 usersapi-image
-    docker run -d --name authapi --network microservices-network -p 8000:8000 authapi-image
-    docker run -d --name todosapi --network microservices-network -p 8082:8082 todosapi-image
-    docker run -d --name frontendapi --network microservices-network -p 8080:8080 frontend-image
-    ```
-
-## Requisitos Previos
-
-- Docker instalados en el sistema.
-- Acceso a la línea de comandos.
-
-## Uso
-
-Para ejecutar el script, utiliza:
-
-```sh
-./nombre-del-script.sh
+### 2. Crear Azure Kubernetes Service (AKS)
+```ps
+az aks create --resource-group <resource_group_name> --name <cluster_name> --node-count 1 --generate-ssh-keys --attach-acr <acr_name>
 ```
 
-Esto construirá las imágenes y desplegará los contenedores en la red `microservices-network`.
-## Funcionamiento
+crea un Azure Kubernetes Service (AKS) y lo vincula automáticamente con tu Azure Container Registry (ACR)
 
-![Login de la aplicación](img/login1.png)
-
-![Login de admin](img/login2.png)
-
-![ToDo](img/todo.png)
+¿Qué significa “attach-acr”?
+Sin --attach-acr, tendrías que configurar permisos manuales para que AKS pueda acceder a tu ACR.
+Con --attach-acr automationrepository, Azure:
+Crea una relación de confianza entre el Service Principal de AKS y tu ACR.
 
 
-## <b> Autora </b>
+Así, Kubernetes puede tirar imágenes directamente desde automationrepository.azurecr.io sin configuraciones extras.
 
-+ [Gloria Vanesa](https://github.com/Vanesa155 "Vanesa V.")
 
-[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
+### 3. Dar permisos al AKS para usar el ACR
+```bash
+az aks update --name <nombre-del-cluster> \
+              --resource-group <nombre-del-rg> \
+              --attach-acr <nombre-del-acr>
+```
+crea un Service Principal (SP) en Azure Active Directory y lo asigna a un rol de acceso (RBAC) dentro de un alcance específico
+Este comando es comúnmente utilizado para configurar autenticación automática en CI/CD, por ejemplo:
+GitHub Actions necesita autenticarse con Azure para desplegar infraestructura o aplicaciones.
+
+
+Se genera un Service Principal con los permisos necesarios (en este caso, Contributor en un grupo de recursos).
+
+
+El JSON que devuelve --sdk-auth se guarda como un secreto en GitHub (AZURE_CREDENTIALS), y luego se usa en los workflows con azure/login.
+*Settings > Secrets and variables > Actions > New secret.*
+
+
+---
+
+## Estrategia DevOps Implementada
+
+### Automatización con GitHub Actions
+Se ha configurado un flujo de CI/CD usando GitHub Actions. Este flujo se activa automáticamente al hacer un `push` sobre la rama `main` y realiza las siguientes acciones:
+
+- Autenticación con Azure usando `azure/login@v1`
+- Construcción de imágenes Docker para cada microservicio
+- Publicación en Azure Container Registry (ACR)
+- Conexión con el clúster AKS
+- Aplicación de manifiestos Kubernetes con `kubectl apply`
+- Exposición del frontend con un servicio tipo `LoadBalancer`
+
+### Archivo utilizado:
+- `.github/workflows/deploy.yml`
+
+### Manifiestos Kubernetes:
+- `k8s/microservices-deployment.yaml`
+
+## Arquitectura Modular con Kubernetes
+
+El archivo `microservices-deployment.yaml` contiene los objetos `Deployment` y `Service` para los siguientes microservicios:
+
+| Microservicio  | Imagen Docker                            | Tipo de Servicio | Puerto expuesto |
+|----------------|-------------------------------------------|------------------|-----------------|
+| Redis          | redis-image                              | ClusterIP        | 6379            |
+| Zipkin         | zipkin-image                             | ClusterIP        | 9411            |
+| Users API      | usersapi-image                           | ClusterIP        | 8083            |
+| Auth API       | authapi-image                            | ClusterIP        | 8000            |
+| Todos API      | todosapi-image                           | ClusterIP        | 8082            |
+| Frontend       | frontend-image                           | LoadBalancer     | 80 → 8080     |
+
+> ⚠️ El frontend se publica externamente mediante IP pública, accesible desde cualquier navegador.
+
+---
+
+## Estrategia de Branching
+
+### Para Infraestructura: Trunk Based Development (TBD)
+Esta estrategia implica trabajar directamente sobre la rama `main`. Las ventajas que aporta son:
+
+- Ciclos de integración más cortos
+- Automatización efectiva del pipeline
+- Reducción de conflictos en los cambios
+- Flujo más simple y rápido
+
+Esto es ideal para la infraestructura, ya que los cambios suelen ser pequeños y deben aplicarse continuamente.
+
+### Para Desarrollo de Aplicaciones: Feature Branches
+Para el desarrollo de APIs o frontend, se sugiere el uso de ramas cortas basadas en `main`, como:
+
+- `main ← auth-login-feature`
+- `main ← fix-todo-validation`
+
+Estas ramas deben:
+
+- Crearse desde `main`
+- Ser fusionadas por Pull Request
+- Tener una vida corta (ideal: < 2 días)
+
+---
+
+## Metodología Ágil: Kanban
+
+Se ha adoptado la metodología Kanban para la organización de tareas del equipo. Las razones principales son:
+
+- Visualización clara del flujo de trabajo
+- Mejora en la gestión del WIP (trabajo en curso)
+- Adaptabilidad a tareas de infraestructura y mantenimiento
+- Ideal para flujos continuos como DevOps
+
+
+ https://trello.com/invite/b/680296aa17864e87fc6c7fed/ATTI1f7653c359f8f014c9a31480c209dc9912CB45C2/microservice
+ 
+### Herramienta: GitHub Projects
+Columnas:
+- To Do
+- In Progress
+- Done
+
+---
+
+## Diagrama de Arquitectura
+![Diagrama de arquitectura](img/diagrama.png)
