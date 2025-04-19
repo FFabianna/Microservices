@@ -1,87 +1,88 @@
-trigger:
-  branches:
-    include:
-      - main
 
-variables:
-  REGISTRY: 'automationrepository.azurecr.io'
+# trigger:
+#   branches:
+#     include:
+#       - main
 
-jobs:
-- job: buildAndDeploy
-  displayName: 'Build, Push and Deploy to AKS'
-  pool:
-    vmImage: 'ubuntu-latest'
+# variables:
+#   REGISTRY: 'automationrepository.azurecr.io'
 
-  steps:
-  - checkout: self
-    displayName: 'Checkout repository'
+# jobs:
+# - job: buildAndDeploy
+#   displayName: 'Build, Push and Deploy to AKS'
+#   pool:
+#     vmImage: 'ubuntu-latest'
 
-  - task: AzureCLI@2
-    displayName: 'Azure Login'
-    inputs:
-      azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        echo "Logged in to Azure"
+#   steps:
+#   - checkout: self
+#     displayName: 'Checkout repository'
 
-  - task: AzureCLI@2
-    displayName: 'Login to Azure Container Registry'
-    inputs:
-      azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az acr login --name automationrepository
+#   - task: AzureCLI@2
+#     displayName: 'Azure Login'
+#     inputs:
+#       azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
+#       scriptType: 'bash'
+#       scriptLocation: 'inlineScript'
+#       inlineScript: |
+#         echo "Logged in to Azure"
 
-  - script: |
-      docker build -t $(REGISTRY)/redis-image ./redis
-      docker build -t $(REGISTRY)/zipkin-image ./zipkin
-      docker build -t $(REGISTRY)/log-image ./log-message-processor
-      docker build -t $(REGISTRY)/usersapi-image ./users-api
-      docker build -t $(REGISTRY)/authapi-image ./auth-api
-      docker build -t $(REGISTRY)/todosapi-image ./todos-api
-      docker build -t $(REGISTRY)/frontend-image ./frontend
+#   - task: AzureCLI@2
+#     displayName: 'Login to Azure Container Registry'
+#     inputs:
+#       azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
+#       scriptType: 'bash'
+#       scriptLocation: 'inlineScript'
+#       inlineScript: |
+#         az acr login --name automationrepository
 
-      docker push $(REGISTRY)/redis-image
-      docker push $(REGISTRY)/zipkin-image
-      docker push $(REGISTRY)/log-image
-      docker push $(REGISTRY)/usersapi-image
-      docker push $(REGISTRY)/authapi-image
-      docker push $(REGISTRY)/todosapi-image
-      docker push $(REGISTRY)/frontend-image
-    displayName: 'Build and push Docker images'
+#   - script: |
+#       docker build -t $(REGISTRY)/redis-image ./redis
+#       docker build -t $(REGISTRY)/zipkin-image ./zipkin
+#       docker build -t $(REGISTRY)/log-image ./log-message-processor
+#       docker build -t $(REGISTRY)/usersapi-image ./users-api
+#       docker build -t $(REGISTRY)/authapi-image ./auth-api
+#       docker build -t $(REGISTRY)/todosapi-image ./todos-api
+#       docker build -t $(REGISTRY)/frontend-image ./frontend
 
-  - task: KubernetesManifest@1
-    displayName: 'Deploy to AKS using manifest'
-    inputs:
-      action: 'deploy'
-      connectionType: 'azureResourceManager'
-      azureSubscriptionConnection: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
-      azureResourceGroup: 'AutomationResources'
-      kubernetesCluster: 'automationcluster'
-      manifests: |
-        k8s/microservices-deployment.yaml
+#       docker push $(REGISTRY)/redis-image
+#       docker push $(REGISTRY)/zipkin-image
+#       docker push $(REGISTRY)/log-image
+#       docker push $(REGISTRY)/usersapi-image
+#       docker push $(REGISTRY)/authapi-image
+#       docker push $(REGISTRY)/todosapi-image
+#       docker push $(REGISTRY)/frontend-image
+#     displayName: 'Build and push Docker images'
 
-  - task: AzureCLI@2
-    displayName: 'Set AKS context (for IP retrieval)'
-    inputs:
-      azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az aks get-credentials --resource-group AutomationResources --name automationcluster
+#   - task: KubernetesManifest@1
+#     displayName: 'Deploy to AKS using manifest'
+#     inputs:
+#       action: 'deploy'
+#       connectionType: 'azureResourceManager'
+#       azureSubscriptionConnection: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
+#       azureResourceGroup: 'AutomationResources'
+#       kubernetesCluster: 'automationcluster'
+#       manifests: |
+#         k8s/microservices-deployment.yaml
 
-  - script: |
-      echo "Waiting for LoadBalancer IP..."
-      for i in {1..20}; do
-        IP=$(kubectl get svc frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        if [ -n "$IP" ]; then
-          echo "Frontend is available at: http://$IP"
-          break
-        else
-          echo "Still waiting for IP..."
-          sleep 10
-        fi
-      done
-    displayName: 'Get frontend LoadBalancer IP'
+#   - task: AzureCLI@2
+#     displayName: 'Set AKS context (for IP retrieval)'
+#     inputs:
+#       azureSubscription: 'Azure for Students(6cef85f5-b462-4088-9dee-b853d7508112)'
+#       scriptType: 'bash'
+#       scriptLocation: 'inlineScript'
+#       inlineScript: |
+#         az aks get-credentials --resource-group AutomationResources --name automationcluster
+
+#   - script: |
+#       echo "Waiting for LoadBalancer IP..."
+#       for i in {1..20}; do
+#         IP=$(kubectl get svc frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+#         if [ -n "$IP" ]; then
+#           echo "Frontend is available at: http://$IP"
+#           break
+#         else
+#           echo "Still waiting for IP..."
+#           sleep 10
+#         fi
+#       done
+#     displayName: 'Get frontend LoadBalancer IP'
